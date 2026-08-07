@@ -1,2 +1,2 @@
 # face-recognition-model
-A face recognition model to detect and draw bounding boxes around the faces.
+Building of face recognition model from scratch to detect and draw bounding boxes around the faces.
