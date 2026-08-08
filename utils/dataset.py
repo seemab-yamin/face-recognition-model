@@ -16,8 +16,6 @@ DATASET_CONFIGS = {
         "input_shape": (112, 122, 3),
         "mean": (0.5, 0.5, 0.5),
         "std": (0.5, 0.5, 0.5),
-        "train_kwargs": {"train": True},
-        "test_kwargs": {"train": False},
     }
 }
 
