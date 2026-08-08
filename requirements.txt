@@ -1,6 +1,7 @@
 numpy
 opencv-python
 pillow
+pyyaml
+timm
 torch
 torchvision
-pyyaml
