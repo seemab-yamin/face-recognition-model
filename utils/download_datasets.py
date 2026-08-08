@@ -24,24 +24,14 @@ def prepare_casia_webface(data_dir, val_size=200):
             if os.path.isdir(os.path.join(dataset_dir, f))
             and not f.startswith(".")  # Skip hidden folders
         ]
-        all_files = sorted(
-            [
-                os.path.join(dirs, f)
-                for dirs in all_dirs_path
-                for f in os.listdir(dirs)
-                if os.path.isfile(os.path.join(dirs, f))
-                and not f.startswith(".")  # Skip hidden folders
-            ]
-        )
-        random.shuffle(all_files)
-        val_files = all_files[:val_size]
+
+        random.shuffle(all_dirs_path)
+        val_dirs_path = all_dirs_path[:val_size]
 
         # move validation files to val_dir
-        for src in val_files:
-            dst = os.path.join(val_dir, src.split(os.sep)[-2], os.path.basename(src))
-            # Check if the folder exists in source before trying to move it
+        for src in val_dirs_path:
             if os.path.exists(src):
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                dst = os.path.join(val_dir, os.path.basename(src))
                 shutil.move(src, dst)
 
         # Move remaining directories to train_dir
@@ -49,12 +39,6 @@ def prepare_casia_webface(data_dir, val_size=200):
             if os.path.exists(src):
                 dst = os.path.join(train_dir, os.path.basename(src))
                 shutil.move(src, dst)
-
-        # Remove empty directories after moving files
-        for dirs in os.listdir(dataset_dir):
-            dir_path = os.path.join(dataset_dir, dirs)
-            if os.path.isdir(dir_path) and not os.listdir(dir_path):
-                os.rmdir(dir_path)
 
 
 if __name__ == "__main__":
