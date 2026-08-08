@@ -83,6 +83,7 @@ def make_dataloaders(
     """
     dataset factory to load datasets
     """
+    os.makedirs(data_dir, exist_ok=True)
     dataset_name = dataset_name.lower()
 
     # Get dataset config
