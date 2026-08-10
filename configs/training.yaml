@@ -1,6 +1,6 @@
 # training.yaml
 seed: 20
-arch: "custom"
+arch: "resnet"
 epochs: 10
 dataset: "CASIA-WebFace"
 batch_size: 32
