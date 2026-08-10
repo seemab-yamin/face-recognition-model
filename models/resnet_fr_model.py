@@ -28,6 +28,7 @@ class RESNETFRModel(nn.Module):
             weights=models.ResNet50_Weights.DEFAULT if pretrained else None
         )
         self.in_features = self.model.fc.in_features
+        self.embedding_size = self.in_features
 
         if freeze_backbone:
             for param in self.model.parameters():
