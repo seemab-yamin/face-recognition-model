@@ -3,6 +3,7 @@ seed: 20
 arch: "resnet"
 epochs: 10
 dataset: "CASIA-WebFace"
+augment: true
 batch_size: 32
 learning_rate: !!float 0.001
 num_workers: 2
@@ -10,6 +11,7 @@ pre_trained: True
 freeze_backbone: True
 use_amp: true
 use_weight_decay: !!float 5e-4 # force float
+training_from_scratch: false
 use_scheduler: !!float 1e-6 # minimal learning rate for scheduler
 use_grad_clip: !!float 1.0
 data_dir: "./datasets"
