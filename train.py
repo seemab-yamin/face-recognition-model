@@ -11,6 +11,7 @@ from losses import ArcFace
 from model_factory import make_model
 from utils import print_config, setup
 
+
 # ============================================================
 # BLOCK 2: DATA LOADING
 # ============================================================
@@ -235,10 +236,6 @@ def main():
     if args.resume and os.path.exists(checkpoint_path):
         print(f"🔄 Resuming from checkpoint: {checkpoint_path}")
         checkpoint = torch.load(checkpoint_path, map_location=device)
-
-        # TODO: Handle pre-trained and freeze_backbone flags when resuming
-        args.pre_trained = False  # Disable pre-trained when resuming
-        args.freeze_backbone = False  # Disable freeze_backbone when resuming
         # Restore model and optimizer
         model, optimizer, criterion, arcface, scheduler = create_model(
             args, info.num_classes, device=device
@@ -252,7 +249,6 @@ def main():
         max_val_acc = checkpoint.get("val_acc", 0.0)
 
         print(f"   Resumed from epoch {start_epoch} with val_acc: {max_val_acc:.4f}")
-
     else:
         # 6. Create fresh model
         if args.resume:
