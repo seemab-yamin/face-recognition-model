@@ -70,6 +70,13 @@ def parse_args_with_defaults():
         help="Name of the dataset",
     )
     parser.add_argument(
+        "--augment",
+        type=bool,
+        default=defaults.get("augment", True),
+        help="Whether to use data augmentation",
+    )
+
+    parser.add_argument(
         "--batch-size",
         type=int,
         default=defaults.get("batch_size", 32),
@@ -98,6 +105,9 @@ def parse_args_with_defaults():
         action="store_true",
         default=defaults.get("use_weight_decay", False),
         help="Use weight decay for the optimizer",
+    )
+    parser.add_argument(
+        "--training-from-scratch", action="store_true", help="Train model from scratch"
     )
     parser.add_argument(
         "--use-scheduler",
