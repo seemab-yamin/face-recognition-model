@@ -7,7 +7,13 @@ import sys
 
 def prepare_casia_webface(data_dir, val_size=200):
     dataset_dir = os.path.join(data_dir, "webface_112x112")
-    if not os.path.exists(dataset_dir):
+    # check folder exist and has train and val sub folders with some files.
+    if (
+        not os.path.exists(dataset_dir)
+        or not os.path.exists(os.path.join(dataset_dir, "train"))
+        or not os.path.exists(os.path.join(dataset_dir, "val"))
+    ):
+        print(f"Downloading and preparing CASIA-WebFace dataset in {dataset_dir}...")
         os.system(
             f"""curl -C - -L -o {data_dir}/webface_112x112.zip https://www.kaggle.com/api/v1/datasets/download/yakhyokhuja/webface-112x112"""
         )
@@ -33,6 +39,7 @@ def prepare_casia_webface(data_dir, val_size=200):
             if os.path.exists(src):
                 dst = os.path.join(val_dir, os.path.basename(src))
                 shutil.move(src, dst)
+                all_dirs_path.remove(src)
 
         # Move remaining directories to train_dir
         for src in all_dirs_path:

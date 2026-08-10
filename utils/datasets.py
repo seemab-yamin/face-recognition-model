@@ -13,10 +13,21 @@ DATASET_CONFIGS = {
     "casia-webface": {
         "prepare_function": prepare_casia_webface,
         "data_folder": "webface_112x112",
-        "input_shape": (112, 122, 3),
-        "mean": (0.5, 0.5, 0.5),
-        "std": (0.5, 0.5, 0.5),
+        # Calculated Mean: [0.5202712416648865, 0.40445297956466675, 0.3465300500392914]
+        "mean": (0.5202712416648865, 0.40445297956466675, 0.3465300500392914),
+        # Calculated Std: [0.28148382902145386, 0.24436739087104797, 0.23586858808994293]
+        "std": (0.28148382902145386, 0.24436739087104797, 0.23586858808994293),
     }
+}
+
+# Model-specific requirements
+MODEL_REQUIREMENTS = {
+    "resnet": {
+        "input_shape": (224, 224, 3),
+        "mean": (0.485, 0.456, 0.406),
+        "std": (0.229, 0.224, 0.225),
+        "needs_resize": True,
+    },
 }
 
 
@@ -79,6 +90,8 @@ def make_dataloaders(
     num_workers: int = 4,
     data_dir: str = "./data",
     augment: bool = True,
+    training_from_scratch: bool = True,
+    arch: str = "resnet",
 ):
     """
     dataset factory to load datasets
@@ -91,14 +104,29 @@ def make_dataloaders(
         raise ValueError(f"Unsupported dataset: {dataset_name}")
 
     dataset_config = DATASET_CONFIGS[dataset_name]
-    input_shape = dataset_config["input_shape"]
     mean, std = dataset_config["mean"], dataset_config["std"]
+
+    # Get model-specific requirements
+    model_config = MODEL_REQUIREMENTS[arch]
+    input_shape = model_config["input_shape"]
+
+    # if training from scratch, use dataset mean and std for normalization
+    if training_from_scratch:
+        mean = dataset_config["mean"]
+        std = dataset_config["std"]
+    else:
+        mean = model_config["mean"]
+        std = model_config["std"]
 
     dataset_config["prepare_function"](data_dir)
     print(f"Prepared dataset {dataset_name} in {data_dir}")
 
     # build transforms
     train_transforms = [transforms.ToTensor()]
+
+    resize_size = input_shape[0], input_shape[1]  # Assuming square input
+    train_transforms = [transforms.Resize(resize_size)] + train_transforms
+
     if augment:
         train_transforms = [transforms.RandomHorizontalFlip()] + train_transforms
 
@@ -185,6 +213,8 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         augment=args.augment,
+        training_from_scratch=False,
+        arch="resnet",
         data_dir=args.data_dir,
     )
 
