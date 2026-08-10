@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 
 from models.resnet_fr_model import RESNETFRModel
@@ -10,6 +9,7 @@ def make_model(
     pretrained: bool,
     freeze_backbone: bool,
     return_embeddings,
+    device,
 ) -> nn.Module:
     """
 
@@ -33,9 +33,7 @@ def make_model(
     else:
         raise ValueError(f"Unknown architecture: {arch}")
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = model.to(device)
-    return model
+    return model.to(device)
 
 
 if __name__ == "__main__":

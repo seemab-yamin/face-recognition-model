@@ -6,7 +6,7 @@ import os
 
 from utils.datasets import make_dataloaders
 from utils.utils import parse_args_with_defaults, set_seed
-
+from model_factory import make_model
 
 # ============================================================
 # BLOCK 1: CONFIGURATION & SETUP
@@ -53,13 +53,78 @@ def load_data(args):
     return train_loader, val_loader, info
 
 
+# ============================================================
+# BLOCK 3: MODEL CREATION
+# ============================================================
+def create_model(args, num_classes, device):
+    """Create model, optimizer, and criterion."""
+    import torch.nn as nn
+
+    # load model architecture
+    model = make_model(
+        arch=args.arch,
+        num_classes=num_classes,
+        pretrained=args.pre_trained,
+        freeze_backbone=args.freeze_backbone,
+        device=device,
+    )
+
+    print(f"Selected model: {args.arch} with pretrained={args.pre_trained}")
+    print(f"Created model:\n{str(model)}")
+
+    # Select trainable parameters
+    if args.pre_trained and args.freeze_backbone:
+        update_params = [p for p in model.parameters() if p.requires_grad]
+    else:
+        update_params = model.parameters()
+
+    if args.use_weight_decay:
+        from torch.optim import AdamW
+
+        print("Using weight decay for optimizer")
+        optimizer = AdamW(
+            params=update_params,
+            lr=args.learning_rate,
+            weight_decay=args.use_weight_decay,
+        )
+    else:
+        from torch.optim import Adam
+
+        optimizer = Adam(params=update_params, lr=args.learning_rate)
+
+    if args.use_scheduler:
+        from torch.optim.lr_scheduler import CosineAnnealingLR
+
+        scheduler = CosineAnnealingLR(
+            optimizer, T_max=args.epochs, eta_min=args.use_scheduler
+        )
+        print(f"Using CosineAnnealingLR scheduler with eta_min={args.use_scheduler}")
+    else:
+        scheduler = None
+
+    criterion = nn.CrossEntropyLoss()
+    return model, optimizer, criterion, scheduler
+
+
 def main():
     """Main training function."""
+    import torch
+
+    # 1. Setup
     args = setup()
     print_config(args)
+
+    # 2. Load data
     train_loader, val_loader, info = load_data(args)
 
-    print(f"Training on dataset: {args.dataset} with {info.num_classes} classes")
+    # 3. Device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Using device: {device}\n")
+
+    # 4. Create model
+    model, optimizer, criterion, scheduler = create_model(
+        args, info.num_classes, device=device
+    )
 
 
 if __name__ == "__main__":
