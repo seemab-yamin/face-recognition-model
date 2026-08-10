@@ -17,7 +17,7 @@ def prepare_casia_webface(data_dir, val_size=200):
         os.system(
             f"""curl -C - -L -o {data_dir}/webface_112x112.zip https://www.kaggle.com/api/v1/datasets/download/yakhyokhuja/webface-112x112"""
         )
-        os.system(f"unzip -o {data_dir}/webface_112x112.zip -d {data_dir}")
+        os.system(f"unzip -q -o {data_dir}/webface_112x112.zip -d {data_dir}")
 
     train_dir = os.path.join(dataset_dir, "train")
     val_dir = os.path.join(dataset_dir, "val")
