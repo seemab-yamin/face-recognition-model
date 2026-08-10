@@ -3,9 +3,22 @@ from torchvision import models
 
 
 class RESNETFRModel(nn.Module):
-    def __init__(
-        self, pretrained=False, freeze_backbone=False, num_classes=0
-    ) -> nn.Module:
+    """
+
+    A ResNet-based model for face recognition tasks. This model allows for optional pretraining, freezing of the backbone, and customization of the number of output classes.
+    Args:
+        pretrained (bool): If True, initializes the model with pretrained weights. Default is False.
+        freeze_backbone (bool): If True, freezes the backbone layers of the model, preventing them from being updated during training. Default is False.
+        num_classes (int): The number of output classes for the final fully connected layer. If set to 0, the final layer will be an identity layer. Default is 0.
+    Attributes:
+        model (nn.Module): The underlying ResNet model.
+        in_features (int): The number of input features to the final fully connected layer.
+    Methods:
+        forward(x): Defines the forward pass of the model, passing input through the ResNet architecture
+
+    """
+
+    def __init__(self, pretrained=False, freeze_backbone=False, num_classes=0) -> None:
         super().__init__()
         self.pretrained = pretrained
         self.freeze_backbone = freeze_backbone

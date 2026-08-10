@@ -7,6 +7,19 @@ from models.resnet_fr_model import RESNETFRModel
 def make_model(
     arch: str, num_classes: int, pretrained: bool, freeze_backbone: bool
 ) -> nn.Module:
+    """
+
+    Create a model based on the specified architecture.
+    Args:
+        arch (str): The architecture of the model (e.g., 'resnet').
+        num_classes (int): The number of output classes for the model.
+        pretrained (bool): Whether to use a pretrained model.
+        freeze_backbone (bool): Whether to freeze the backbone of the model.
+    Returns:
+        nn.Module: The created model.
+
+    """
+
     if arch == "resnet":
         model = RESNETFRModel(
             pretrained=pretrained,
