@@ -9,34 +9,7 @@ import torch
 from data import make_dataloaders
 from losses import ArcFace
 from model_factory import make_model
-from utils import parse_args_with_defaults, set_seed
-
-# ============================================================
-# BLOCK 1: CONFIGURATION & SETUP
-# ============================================================
-def setup():
-    """Parse arguments, set seed, and create directories."""
-
-    args = parse_args_with_defaults()
-    set_seed(args.seed)
-
-    # Create results directories
-    os.makedirs(args.artifacts_dir, exist_ok=True)
-    os.makedirs(os.path.join(args.artifacts_dir, "metrics"), exist_ok=True)
-    os.makedirs(os.path.join(args.artifacts_dir, "exported_models"), exist_ok=True)
-    os.makedirs(os.path.join(args.artifacts_dir, "checkpoints"), exist_ok=True)
-    return args
-
-
-def print_config(args):
-    """Print configuration."""
-    print("\n" + "=" * 60)
-    print("CONFIGURATION")
-    print("=" * 60)
-    for key, value in vars(args).items():
-        print(f"  {key}: {value}")
-    print("=" * 60 + "\n")
-
+from utils import print_config, setup
 
 # ============================================================
 # BLOCK 2: DATA LOADING
@@ -247,46 +220,109 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}\n")
 
-    # 4. Create model
-    # model, optimizer, criterion, arcface, scheduler = create_model(
-    #     args, info.num_classes, device=device
-    # )
+    # Checkpoint path
+    checkpoint_dir = os.path.join(args.artifacts_dir, "checkpoints")
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    checkpoint_path = os.path.join(
+        checkpoint_dir,
+        f"{args.arch}_{args.dataset}_best.pth",
+    )
 
-    # # 5. Training Loop
-    # for epoch in range(args.epochs):
-    #     epoch_time, avg_batch = train_epoch(
-    #         model,
-    #         criterion,
-    #         arcface,
-    #         optimizer,
-    #         train_loader,
-    #         args.use_amp,
-    #         device,
-    #         args.use_grad_clip,
-    #     )
+    # 5. Resume or create fresh
+    start_epoch = 0
+    max_val_acc = 0.0
 
-    #     # validate
-    #     all_preds, all_labels, val_time, val_acc = validate(model, val_loader, device)
-    #     print_epoch_report(epoch, epoch_time, avg_batch, val_time, val_acc, device)
+    if args.resume and os.path.exists(checkpoint_path):
+        print(f"🔄 Resuming from checkpoint: {checkpoint_path}")
+        checkpoint = torch.load(checkpoint_path, map_location=device)
 
-    #     if scheduler:
-    #         scheduler.step()
+        # TODO: Handle pre-trained and freeze_backbone flags when resuming
+        args.pre_trained = False  # Disable pre-trained when resuming
+        args.freeze_backbone = False  # Disable freeze_backbone when resuming
+        # Restore model and optimizer
+        model, optimizer, criterion, arcface, scheduler = create_model(
+            args, info.num_classes, device=device
+        )
 
-    # # 8. Save checkpoint
-    # checkpoint_path = os.path.join(
-    #     args.artifacts_dir, "checkpoints", f"{args.arch}_{args.dataset}_best.pth"
-    # )
-    # torch.save(
-    #     {
-    #         "epoch": args.epochs,
-    #         "model_state_dict": model.state_dict(),
-    #         "optimizer_state_dict": optimizer.state_dict(),
-    #         "val_acc": val_acc,
-    #         "args": vars(args),
-    #     },
-    #     checkpoint_path,
-    # )
-    # print(f"✅ Checkpoint saved: {checkpoint_path}")
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        arcface.load_state_dict(checkpoint["arcface_state_dict"])
+
+        start_epoch = checkpoint["epoch"]
+        max_val_acc = checkpoint.get("val_acc", 0.0)
+
+        print(f"   Resumed from epoch {start_epoch} with val_acc: {max_val_acc:.4f}")
+
+    else:
+        # 6. Create fresh model
+        if args.resume:
+            print(f"⚠️ Checkpoint not found at {checkpoint_path}. Starting fresh.")
+
+        model, optimizer, criterion, arcface, scheduler = create_model(
+            args, info.num_classes, device=device
+        )
+
+    # 7. Training Loop
+    for epoch in range(start_epoch, args.epochs):
+        print(f"\n{'='*50}")
+        print(f"Epoch {epoch+1}/{args.epochs}")
+        print(f"{'='*50}")
+
+        # Train
+        epoch_time, avg_batch = train_epoch(
+            model,
+            criterion,
+            arcface,
+            optimizer,
+            train_loader,
+            args.use_amp,
+            device,
+            args.use_grad_clip,
+        )
+
+        # Validate
+        all_preds, all_labels, val_time, val_acc = validate(model, val_loader, device)
+        print_epoch_report(epoch, epoch_time, avg_batch, val_time, val_acc, device)
+
+        # Update scheduler
+        if scheduler:
+            scheduler.step()
+
+        # 8. Save checkpoint (best model only)
+        if args.save_best and val_acc > max_val_acc:
+            max_val_acc = val_acc
+            torch.save(
+                {
+                    "epoch": epoch + 1,
+                    "model_state_dict": model.state_dict(),
+                    "arcface_state_dict": arcface.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "val_acc": val_acc,
+                    "args": vars(args),
+                },
+                checkpoint_path,
+            )
+            print(
+                f"✅ Best checkpoint saved: {checkpoint_path} (val_acc: {val_acc:.4f})"
+            )
+
+        # Optional: Save periodic checkpoint every N epochs
+        if args.save_every and (epoch + 1) % args.save_every == 0:
+            periodic_path = checkpoint_path.replace("_best", f"_epoch{epoch+1}")
+            torch.save(
+                {
+                    "epoch": epoch + 1,
+                    "model_state_dict": model.state_dict(),
+                    "arcface_state_dict": arcface.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "val_acc": val_acc,
+                    "args": vars(args),
+                },
+                periodic_path,
+            )
+            print(f"📁 Periodic checkpoint saved: {periodic_path}")
+
+    print("\n✅ Training complete!")
 
 
 if __name__ == "__main__":

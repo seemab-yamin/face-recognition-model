@@ -1,10 +1,26 @@
 import argparse
+import os
 import random
 import sys
 
 import numpy as np
 import torch
 import yaml
+
+
+# ==================== Helper: Setup ====================
+def setup():
+    """Parse arguments and setup configuration."""
+    # Your existing argparse setup
+    args = parse_args_with_defaults()
+    set_seed(args.seed)
+
+    # Create results directories
+    os.makedirs(args.artifacts_dir, exist_ok=True)
+    os.makedirs(os.path.join(args.artifacts_dir, "metrics"), exist_ok=True)
+    os.makedirs(os.path.join(args.artifacts_dir, "exported_models"), exist_ok=True)
+    os.makedirs(os.path.join(args.artifacts_dir, "checkpoints"), exist_ok=True)
+    return args
 
 
 def load_config(config_path="config.yaml"):
@@ -139,6 +155,18 @@ def parse_args_with_defaults():
         default=defaults.get("save_best", True),
         help="Save the best model based on validation accuracy",
     )
+    parser.add_argument(
+        "--save-every",
+        type=int,
+        default=defaults.get("save_every", 0),
+        help="Save model every N epochs (0 = disabled)",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        default=defaults.get("resume", True),
+        help="Resume training from the last checkpoint",
+    )
 
     # Now parse all args with the fully built parser
     args = parser.parse_args()
@@ -147,6 +175,17 @@ def parse_args_with_defaults():
     args.config_path = config_path
 
     return args
+
+
+# ==================== Helper: Print Config ====================
+def print_config(args):
+    """Print configuration in a readable format."""
+    print("\n" + "=" * 60)
+    print("CONFIGURATION")
+    print("=" * 60)
+    for key, value in vars(args).items():
+        print(f"  {key:20s}: {value}")
+    print("=" * 60 + "\n")
 
 
 def set_seed(seed: int = 42, deterministic: bool = True):

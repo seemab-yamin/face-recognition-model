@@ -16,4 +16,6 @@ use_scheduler: !!float 1e-6 # minimal learning rate for scheduler
 use_grad_clip: !!float 1.0
 data_dir: "./datasets"
 artifacts_dir: "./artifacts"
+resume: true
 save_best: true
+save_every: 5
