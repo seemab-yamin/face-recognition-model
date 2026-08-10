@@ -1,15 +1,15 @@
 """
-Modular Image Classifier - Training Script
+Face Recognition Model - Training Script
 """
 
 import os
 
 import torch
 
+from data import make_dataloaders
+from losses import ArcFace
 from model_factory import make_model
-from utils.datasets import make_dataloaders
-from utils.utils import parse_args_with_defaults, set_seed
-
+from utils import parse_args_with_defaults, set_seed
 
 # ============================================================
 # BLOCK 1: CONFIGURATION & SETUP
@@ -108,15 +108,19 @@ def create_model(args, num_classes, device):
     else:
         scheduler = None
 
+    arcface = ArcFace(
+        in_features=model.in_features, num_classes=num_classes, s=64.0, m=0.5
+    )
     criterion = nn.CrossEntropyLoss()
-    return model, optimizer, criterion, scheduler
+
+    return model, optimizer, criterion, arcface, scheduler
 
 
 # ============================================================
 # BLOCK 4: TRAINING
 # ============================================================
 def train_epoch(
-    model, criterion, optimizer, train_loader, use_amp, device, use_grad_clip
+    model, criterion, arcface, optimizer, train_loader, use_amp, device, use_grad_clip
 ):
     """Train one epoch and return metrics."""
 
@@ -142,8 +146,9 @@ def train_epoch(
         # forward pass with mixed precision if enabled
         if use_amp:
             with autocast():
-                outputs = model(images)
-                loss = criterion(outputs, labels)
+                embeddings = model(images)  # Get 512-dim feature vectors
+                logits = arcface(embeddings, labels)  # Apply ArcFace margin
+                loss = criterion(logits, labels)  # Standard Cross-Entrop
             scaler.scale(loss).backward()
             if use_grad_clip:
                 scaler.unscale_(optimizer)
@@ -153,8 +158,9 @@ def train_epoch(
             scaler.step(optimizer)
             scaler.update()
         else:
-            outputs = model(images)
-            loss = criterion(outputs, labels)
+            embeddings = model(images)  # Get 512-dim feature vectors
+            logits = arcface(embeddings, labels)  # Apply ArcFace margin
+            loss = criterion(logits, labels)  # Standard Cross-Entropy
             loss.backward()
             if use_grad_clip:
                 torch.nn.utils.clip_grad_norm_(
@@ -242,28 +248,45 @@ def main():
     print(f"Using device: {device}\n")
 
     # 4. Create model
-    model, optimizer, criterion, scheduler = create_model(
-        args, info.num_classes, device=device
-    )
+    # model, optimizer, criterion, arcface, scheduler = create_model(
+    #     args, info.num_classes, device=device
+    # )
 
-    # 5. Training Loop
-    for epoch in range(args.epochs):
-        epoch_time, avg_batch = train_epoch(
-            model,
-            criterion,
-            optimizer,
-            train_loader,
-            args.use_amp,
-            device,
-            args.use_grad_clip,
-        )
+    # # 5. Training Loop
+    # for epoch in range(args.epochs):
+    #     epoch_time, avg_batch = train_epoch(
+    #         model,
+    #         criterion,
+    #         arcface,
+    #         optimizer,
+    #         train_loader,
+    #         args.use_amp,
+    #         device,
+    #         args.use_grad_clip,
+    #     )
 
-        # validate
-        all_preds, all_labels, val_time, val_acc = validate(model, val_loader, device)
-        print_epoch_report(epoch, epoch_time, avg_batch, val_time, val_acc, device)
+    #     # validate
+    #     all_preds, all_labels, val_time, val_acc = validate(model, val_loader, device)
+    #     print_epoch_report(epoch, epoch_time, avg_batch, val_time, val_acc, device)
 
-        if scheduler:
-            scheduler.step()
+    #     if scheduler:
+    #         scheduler.step()
+
+    # # 8. Save checkpoint
+    # checkpoint_path = os.path.join(
+    #     args.artifacts_dir, "checkpoints", f"{args.arch}_{args.dataset}_best.pth"
+    # )
+    # torch.save(
+    #     {
+    #         "epoch": args.epochs,
+    #         "model_state_dict": model.state_dict(),
+    #         "optimizer_state_dict": optimizer.state_dict(),
+    #         "val_acc": val_acc,
+    #         "args": vars(args),
+    #     },
+    #     checkpoint_path,
+    # )
+    # print(f"✅ Checkpoint saved: {checkpoint_path}")
 
 
 if __name__ == "__main__":

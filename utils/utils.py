@@ -123,6 +123,12 @@ def parse_args_with_defaults():
         default=defaults.get("artifacts_dir", "./artifacts"),
         help="Directory for storing artifacts",
     )
+    parser.add_argument(
+        "--save-best",
+        action="store_true",
+        default=defaults.get("save_best", True),
+        help="Save the best model based on validation accuracy",
+    )
 
     # Now parse all args with the fully built parser
     args = parser.parse_args()
