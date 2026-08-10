@@ -111,6 +111,19 @@ def parse_args_with_defaults():
         help="Number of workers for dataloaders",
     )
     parser.add_argument(
+        "--freeze_backbone",
+        action="store_true",
+        default=defaults.get("freeze_backbone", False),
+        help="Freeze the backbone of the model",
+    )
+    parser.add_argument(
+        "--pre_trained",
+        action="store_true",
+        default=defaults.get("pre_trained", False),
+        help="Use a pre-trained model",
+    )
+
+    parser.add_argument(
         "--use-amp",
         action="store_true",
         default=defaults.get("use_amp", False),
