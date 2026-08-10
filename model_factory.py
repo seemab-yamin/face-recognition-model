@@ -5,7 +5,11 @@ from models.resnet_fr_model import RESNETFRModel
 
 
 def make_model(
-    arch: str, num_classes: int, pretrained: bool, freeze_backbone: bool
+    arch: str,
+    num_classes: int,
+    pretrained: bool,
+    freeze_backbone: bool,
+    return_embeddings,
 ) -> nn.Module:
     """
 
@@ -24,7 +28,7 @@ def make_model(
         model = RESNETFRModel(
             pretrained=pretrained,
             freeze_backbone=freeze_backbone,
-            num_classes=num_classes,
+            num_classes=0 if return_embeddings else num_classes,
         )
     else:
         raise ValueError(f"Unknown architecture: {arch}")
