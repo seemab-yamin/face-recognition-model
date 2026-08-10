@@ -1,3 +1,3 @@
-from .resnet_model import RESNETFRModel
+from .resnet_fr_model import RESNETFRModel
 
 __all__ = ["RESNETFRModel"]
