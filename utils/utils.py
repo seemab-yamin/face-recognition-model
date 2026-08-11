@@ -133,7 +133,6 @@ def parse_args_with_defaults():
         default=defaults.get("pre_trained", False),
         help="Use a pre-trained model",
     )
-
     parser.add_argument(
         "--use-amp",
         action="store_true",
