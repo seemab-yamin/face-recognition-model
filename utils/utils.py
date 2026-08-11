@@ -147,7 +147,10 @@ def parse_args_with_defaults():
         help="Use weight decay for the optimizer",
     )
     parser.add_argument(
-        "--training-from-scratch", action="store_true", help="Train model from scratch"
+        "--training-from-scratch",
+        action="store_true",
+        default=defaults.get("training_from_scratch", False),
+        help="Train the model from scratch",
     )
     parser.add_argument(
         "--use-scheduler",
