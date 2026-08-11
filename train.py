@@ -46,17 +46,23 @@ def create_model(args, num_classes, device):
         num_classes=num_classes,
         pretrained=args.pre_trained,
         freeze_backbone=args.freeze_backbone,
+        return_embeddings=args.return_embeddings,
         device=device,
     )
 
     print(f"Selected model: {args.arch} with pretrained={args.pre_trained}")
     print(f"Created model:\n{model}")
 
+    # Create ArcFace
+    arcface = ArcFace(
+        in_features=model.in_features, num_classes=num_classes, s=64.0, m=0.5
+    ).to(device)
+
     # Select trainable parameters
     if args.pre_trained and args.freeze_backbone:
-        update_params = [p for p in model.parameters() if p.requires_grad]
+        update_params = list(arcface.parameters())
     else:
-        update_params = model.parameters()
+        update_params = list(model.parameters()) + list(arcface.parameters())
 
     if args.use_weight_decay:
         from torch.optim import AdamW
@@ -82,9 +88,6 @@ def create_model(args, num_classes, device):
     else:
         scheduler = None
 
-    arcface = ArcFace(
-        in_features=model.in_features, num_classes=num_classes, s=64.0, m=0.5
-    )
     criterion = nn.CrossEntropyLoss()
 
     return model, optimizer, criterion, arcface, scheduler
@@ -218,7 +221,12 @@ def main():
     train_loader, val_loader, info = load_data(args)
 
     # 3. Device
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
     print(f"Using device: {device}\n")
 
     # Checkpoint path
@@ -233,13 +241,17 @@ def main():
     start_epoch = 0
     max_val_acc = 0.0
 
+    # Restore model and optimizer
+    model, optimizer, criterion, arcface, scheduler = create_model(
+        args, info.num_classes, device=device
+    )
     if args.resume and os.path.exists(checkpoint_path):
         print(f"🔄 Resuming from checkpoint: {checkpoint_path}")
-        checkpoint = torch.load(checkpoint_path, map_location=device)
-        # Restore model and optimizer
-        model, optimizer, criterion, arcface, scheduler = create_model(
-            args, info.num_classes, device=device
-        )
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location=device)
+        except (FileNotFoundError, RuntimeError) as e:
+            print(f"⚠️ Failed to load checkpoint: {e}. Starting fresh.")
+            checkpoint = None
 
         model.load_state_dict(checkpoint["model_state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
@@ -253,10 +265,6 @@ def main():
         # 6. Create fresh model
         if args.resume:
             print(f"⚠️ Checkpoint not found at {checkpoint_path}. Starting fresh.")
-
-        model, optimizer, criterion, arcface, scheduler = create_model(
-            args, info.num_classes, device=device
-        )
 
     # 7. Training Loop
     for epoch in range(start_epoch, args.epochs):
@@ -293,6 +301,9 @@ def main():
                     "model_state_dict": model.state_dict(),
                     "arcface_state_dict": arcface.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": (
+                        scheduler.state_dict() if scheduler else None
+                    ),
                     "val_acc": val_acc,
                     "args": vars(args),
                 },
@@ -311,6 +322,9 @@ def main():
                     "model_state_dict": model.state_dict(),
                     "arcface_state_dict": arcface.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": (
+                        scheduler.state_dict() if scheduler else None
+                    ),
                     "val_acc": val_acc,
                     "args": vars(args),
                 },

@@ -1,14 +1,16 @@
 # training.yaml
 seed: 20
 arch: "resnet"
+return_embeddings: true
 epochs: 10
 dataset: "CASIA-WebFace"
 augment: true
+drop_last: true
 batch_size: 32
-learning_rate: !!float 0.001
 num_workers: 2
+learning_rate: !!float 0.001
 pre_trained: True
-freeze_backbone: True
+freeze_backbone: false
 use_amp: true
 use_weight_decay: !!float 5e-4 # force float
 training_from_scratch: false

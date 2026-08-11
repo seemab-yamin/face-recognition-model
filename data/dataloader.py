@@ -8,6 +8,9 @@ from torchvision import transforms
 from utils.download_datasets import prepare_casia_webface
 from utils.utils import seed_worker
 
+# dummy empty lambda function for prepare_casia_sample_webface, since we don't have a sample dataset to prepare
+prepare_casia_sample_webface = lambda x: x
+
 # Dataset-specific configurations
 DATASET_CONFIGS = {
     "casia-webface": {
@@ -17,7 +20,15 @@ DATASET_CONFIGS = {
         "mean": (0.5202712416648865, 0.40445297956466675, 0.3465300500392914),
         # Calculated Std: [0.28148382902145386, 0.24436739087104797, 0.23586858808994293]
         "std": (0.28148382902145386, 0.24436739087104797, 0.23586858808994293),
-    }
+    },
+    "casia-webface-sample": {
+        "prepare_function": prepare_casia_sample_webface,
+        "data_folder": "webface_112x112_sample",
+        # Calculated Mean: [0.5202712416648865, 0.40445297956466675, 0.3465300500392914]
+        "mean": (0.5202712416648865, 0.40445297956466675, 0.3465300500392914),
+        # Calculated Std: [0.28148382902145386, 0.24436739087104797, 0.23586858808994293]
+        "std": (0.28148382902145386, 0.24436739087104797, 0.23586858808994293),
+    },
 }
 
 # Model-specific requirements
@@ -92,6 +103,7 @@ def make_dataloaders(
     augment: bool = True,
     training_from_scratch: bool = True,
     arch: str = "resnet",
+    drop_last: bool = True,
 ):
     """
     dataset factory to load datasets
@@ -112,9 +124,11 @@ def make_dataloaders(
 
     # if training from scratch, use dataset mean and std for normalization
     if training_from_scratch:
+        print(f"Using dataset mean and std for normalization: mean={mean}, std={std}")
         mean = dataset_config["mean"]
         std = dataset_config["std"]
     else:
+        print(f"Using model mean and std for normalization: mean={mean}, std={std}")
         mean = model_config["mean"]
         std = model_config["std"]
 
@@ -161,7 +175,7 @@ def make_dataloaders(
         "num_workers": num_workers,
         "pin_memory": (num_workers > 0)
         and (device == "cuda"),  # default, will be set to True if device is CUDA
-        "drop_last": True,  # drop last incomplete batch
+        "drop_last": drop_last,  # drop last incomplete batch
         "worker_init_fn": seed_worker,
         "generator": torch.Generator().manual_seed(seed),  # for reproducibility
     }
@@ -216,6 +230,7 @@ if __name__ == "__main__":
         training_from_scratch=False,
         arch="resnet",
         data_dir=args.data_dir,
+        drop_last=args.drop_last,
     )
 
     print(f"Dataset: {args.dataset}")

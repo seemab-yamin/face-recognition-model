@@ -6,8 +6,8 @@ import torch.nn.functional as F
 class ArcFace(nn.Module):
     def __init__(self, in_features, num_classes, s=64.0, m=0.5):
         super().__init__()
-        self.s = s
-        self.m = m
+        self.s = torch.tensor(s)
+        self.m = torch.tensor(m)
         self.weight = nn.Parameter(torch.FloatTensor(num_classes, in_features))
         nn.init.xavier_uniform_(self.weight)
 

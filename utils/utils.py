@@ -68,6 +68,12 @@ def parse_args_with_defaults():
         help="Model architecture",
     )
     parser.add_argument(
+        "--return-embeddings",
+        type=bool,
+        default=defaults.get("return_embeddings", False),
+        help="Return embeddings from the model",
+    )
+    parser.add_argument(
         "--seed",
         type=int,
         default=defaults.get("seed", 42),
@@ -91,7 +97,12 @@ def parse_args_with_defaults():
         default=defaults.get("augment", True),
         help="Whether to use data augmentation",
     )
-
+    parser.add_argument(
+        "--drop-last",
+        type=bool,
+        default=defaults.get("drop_last", True),
+        help="Whether to drop the last incomplete batch",
+    )
     parser.add_argument(
         "--batch-size",
         type=int,

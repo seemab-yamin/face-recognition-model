@@ -1,14 +1,13 @@
 import torch.nn as nn
 
-from models.resnet_fr_model import RESNETFRModel
-
+from models import RESNETFRModel
 
 def make_model(
     arch: str,
     num_classes: int,
     pretrained: bool,
     freeze_backbone: bool,
-    return_embeddings,
+    return_embeddings: bool,
     device,
 ) -> nn.Module:
     """
@@ -49,5 +48,4 @@ if __name__ == "__main__":
     )
 
     print(f"Selected model:\n{arch} with pretrained={pretrained}")
-    model_summary = str(model)
-    print(f"Created model:\n{model_summary}")
+    print(f"Created model:\n{model}")
