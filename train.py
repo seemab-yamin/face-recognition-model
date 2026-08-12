@@ -321,9 +321,9 @@ def main():
 
     # 7. Training Loop
     for epoch in range(start_epoch, args.epochs):
-        print(f"\n{'='*50}")
-        print(f"Epoch {epoch+1}/{args.epochs}")
-        print(f"{'='*50}")
+        print(f"\n{'=' * 50}")
+        print(f"Epoch {epoch + 1}/{args.epochs}")
+        print(f"{'=' * 50}")
 
         # Train
         epoch_time, avg_batch = train_epoch(
@@ -368,7 +368,7 @@ def main():
 
         # Optional: Save periodic checkpoint every N epochs
         if args.save_every and (epoch + 1) % args.save_every == 0:
-            periodic_path = checkpoint_path.replace("_best", f"_epoch{epoch+1}")
+            periodic_path = checkpoint_path.replace("_best", f"_epoch{epoch + 1}")
             torch.save(
                 {
                     "epoch": epoch + 1,
