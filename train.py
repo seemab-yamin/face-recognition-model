@@ -12,6 +12,16 @@ from model_factory import make_model
 from utils import print_config, setup
 
 
+def compute_grad_norm(model):
+    """Compute gradient norm across all parameters."""
+    total_norm = 0.0
+    for p in model.parameters():
+        if p.grad is not None:
+            param_norm = p.grad.data.norm(2)
+            total_norm += param_norm.item() ** 2
+    return total_norm**0.5
+
+
 # ============================================================
 # BLOCK 2: DATA LOADING
 # ============================================================
@@ -152,6 +162,7 @@ def train_epoch(
 
         optimizer.zero_grad()
 
+        total_norm = 0
         # Forward pass
         if use_amp:
             with autocast():
@@ -168,11 +179,8 @@ def train_epoch(
             scaler.scale(loss).backward()
 
             # Gradient norm
-            total_norm = 0.0
-            for p in model.parameters():
-                if p.grad is not None:
-                    total_norm += p.grad.norm().item() ** 2
-            total_norm = total_norm**0.5
+            total_norm = compute_grad_norm(model)
+            print(f"grad_norm={total_norm:.4f}")  # If > 1000, instability
 
             if use_grad_clip:
                 scaler.unscale_(optimizer)
@@ -194,11 +202,8 @@ def train_epoch(
             loss.backward()
 
             # Gradient norm
-            total_norm = 0.0
-            for p in model.parameters():
-                if p.grad is not None:
-                    total_norm += p.grad.norm().item() ** 2
-            total_norm = total_norm**0.5
+            total_norm = compute_grad_norm(model)
+            print(f"grad_norm={total_norm:.4f}")  # If > 1000, instability
 
             if use_grad_clip:
                 torch.nn.utils.clip_grad_norm_(
