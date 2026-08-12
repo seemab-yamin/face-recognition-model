@@ -194,6 +194,12 @@ def parse_args_with_defaults():
         help="Resume training from the last checkpoint",
     )
     parser.add_argument(
+        "--use-arcface",
+        action="store_true",
+        default=defaults.get("use_arcface", False),
+        help="Use ArcFace loss for training",
+    )
+    parser.add_argument(
         "--arcface-m",
         type=float,
         default=defaults.get("arcface_m", 0.2),

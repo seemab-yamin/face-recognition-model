@@ -21,5 +21,6 @@ artifacts_dir: "./artifacts"
 resume: true
 save_best: true
 save_every: 5
+use_arcface: false
 arcface_m: !!float 0.2
 arcface_s: !!float 64.0

@@ -53,24 +53,41 @@ def create_model(args, num_classes, device):
     print(f"Selected model: {args.arch} with pretrained={args.pre_trained}")
     print(f"Created model:\n{model}")
 
-    # Create ArcFace
-    arcface = ArcFace(
-        in_features=model.in_features,
-        num_classes=num_classes,
-        s=args.arcface_s,
-        m=args.arcface_m,
-    ).to(device)
+    # Create ArcFace if enabled
+    if args.use_arcface:
+        arcface = ArcFace(
+            in_features=model.in_features,
+            num_classes=num_classes,
+            s=args.arcface_s,
+            m=args.arcface_m,
+        ).to(device)
+        print(f"ArcFace enabled: s={args.arcface_s}, m={args.arcface_m}")
+    else:
+        arcface = None
+        print("ArcFace disabled — using standard Cross-Entropy")
 
     # Select trainable parameters
     if args.pre_trained and args.freeze_backbone:
-        update_params = list(arcface.parameters())
+        if args.use_arcface:
+            update_params = list(arcface.parameters())
+        else:
+            # If backbone is frozen and no ArcFace, only train final layer
+            update_params = [p for p in model.parameters() if p.requires_grad]
     else:
-        update_params = list(model.parameters()) + list(arcface.parameters())
+        if args.use_arcface:
+            update_params = list(model.parameters()) + list(arcface.parameters())
+        else:
+            update_params = model.parameters()
 
+    # Log trainable parameter count
+    total_trainable = sum(p.numel() for p in update_params)
+    print(f"Trainable parameters: {total_trainable:,}")
+
+    # Optimizer
     if args.use_weight_decay:
         from torch.optim import AdamW
 
-        print("Using weight decay for optimizer")
+        print(f"Using AdamW with weight_decay={args.use_weight_decay}")
         optimizer = AdamW(
             params=update_params,
             lr=args.learning_rate,
@@ -79,8 +96,10 @@ def create_model(args, num_classes, device):
     else:
         from torch.optim import Adam
 
+        print(f"Using Adam with lr={args.learning_rate}")
         optimizer = Adam(params=update_params, lr=args.learning_rate)
 
+    # Scheduler
     if args.use_scheduler:
         from torch.optim.lr_scheduler import CosineAnnealingLR
 
@@ -117,48 +136,64 @@ def train_epoch(
 
     for batch_idx, (images, labels) in enumerate(train_loader):
         batch_start = time.time()
-        # move to device
         images = images.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
 
         optimizer.zero_grad()
 
-        # forward pass with mixed precision if enabled
+        # Forward pass
         if use_amp:
             with autocast():
-                embeddings = model(images)  # Get 512-dim feature vectors
-                logits = arcface(embeddings, labels)  # Apply ArcFace margin
-                # print Training loss
-                loss = criterion(logits, labels)  # Standard Cross-Entrop
+                embeddings = model(images)  # Shape: (batch, embedding_dim)
+
+                # Handle ArcFace or standard classification
+                if arcface is not None:
+                    logits = arcface(embeddings, labels)  # Apply ArcFace margin
+                else:
+                    logits = embeddings  # Already class logits from model
+
+                loss = criterion(logits, labels)
+
             scaler.scale(loss).backward()
-            # compute gradient norm for logging
+
+            # Gradient norm
             total_norm = 0.0
             for p in model.parameters():
                 if p.grad is not None:
                     total_norm += p.grad.norm().item() ** 2
             total_norm = total_norm**0.5
+
             if use_grad_clip:
                 scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(
                     model.parameters(), max_norm=use_grad_clip
                 )
+
             scaler.step(optimizer)
             scaler.update()
         else:
-            embeddings = model(images)  # Get 512-dim feature vectors
-            logits = arcface(embeddings, labels)  # Apply ArcFace margin
-            loss = criterion(logits, labels)  # Standard Cross-Entropy
+            embeddings = model(images)
+
+            if arcface is not None:
+                logits = arcface(embeddings, labels)
+            else:
+                logits = embeddings
+
+            loss = criterion(logits, labels)
             loss.backward()
-            # compute gradient norm for logging
+
+            # Gradient norm
             total_norm = 0.0
             for p in model.parameters():
                 if p.grad is not None:
                     total_norm += p.grad.norm().item() ** 2
             total_norm = total_norm**0.5
+
             if use_grad_clip:
                 torch.nn.utils.clip_grad_norm_(
                     model.parameters(), max_norm=use_grad_clip
                 )
+
             optimizer.step()
 
         batch_time = time.time() - batch_start
@@ -170,7 +205,7 @@ def train_epoch(
             )
 
     epoch_time = time.time() - epoch_start
-    avg_batch = sum(batch_times) / len(batch_times)
+    avg_batch = sum(batch_times) / len(batch_times) if batch_times else 0
 
     return epoch_time, avg_batch
 
