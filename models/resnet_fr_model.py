@@ -33,6 +33,10 @@ class RESNETFRModel(nn.Module):
         if freeze_backbone:
             for param in self.model.parameters():
                 param.requires_grad = False
+        else:
+            # If not freezing the backbone, ensure all parameters are trainable
+            for param in self.model.parameters():
+                param.requires_grad = True
 
         # Replace the final fully connected layer with a new one for the desired number of classes
         self.model.fc = (
