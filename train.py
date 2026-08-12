@@ -84,12 +84,11 @@ def create_model(args, num_classes, device):
                     "No trainable parameters found! "
                     "Ensure freeze_backbone=False or enable ArcFace."
                 )
-
     else:
         if args.use_arcface:
             update_params = list(model.parameters()) + list(arcface.parameters())
         else:
-            update_params = model.parameters()
+            update_params = list(model.parameters())
 
     # Log trainable parameter count
     total_trainable = sum(p.numel() for p in update_params)
