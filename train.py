@@ -130,7 +130,6 @@ def train_epoch(
                 logits = arcface(embeddings, labels)  # Apply ArcFace margin
                 # print Training loss
                 loss = criterion(logits, labels)  # Standard Cross-Entrop
-                print(f"  Batch {batch_idx}: Loss = {loss.item():.4f}")
             scaler.scale(loss).backward()
             # compute gradient norm for logging
             total_norm = 0.0
@@ -149,7 +148,6 @@ def train_epoch(
             embeddings = model(images)  # Get 512-dim feature vectors
             logits = arcface(embeddings, labels)  # Apply ArcFace margin
             loss = criterion(logits, labels)  # Standard Cross-Entropy
-            print(f"  Batch {batch_idx}: Loss = {loss.item():.4f}")
             loss.backward()
             # compute gradient norm for logging
             total_norm = 0.0
