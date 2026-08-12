@@ -9,10 +9,8 @@ class ArcFace(nn.Module):
     def __init__(self, in_features, num_classes, s=64.0, m=0.5):
         super().__init__()
         # Use buffers for device compatibility
-        self.s = torch.tensor(s)
-        self.m = torch.tensor(m)
-        self.register_buffer("s", self.s)
-        self.register_buffer("m", self.m)
+        self.register_buffer("s", torch.tensor(s))
+        self.register_buffer("m", torch.tensor(m))
         self.weight = nn.Parameter(torch.FloatTensor(num_classes, in_features))
         nn.init.xavier_uniform_(self.weight)
 
