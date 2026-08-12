@@ -359,41 +359,38 @@ def main():
         # 8. Save checkpoint (best model only)
         if args.save_best and val_acc > max_val_acc:
             max_val_acc = val_acc
-            torch.save(
-                {
-                    "epoch": epoch + 1,
-                    "model_state_dict": model.state_dict(),
-                    "arcface_state_dict": arcface.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "scheduler_state_dict": (
-                        scheduler.state_dict() if scheduler else None
-                    ),
-                    "val_acc": val_acc,
-                    "args": vars(args),
-                },
-                checkpoint_path,
-            )
+            checkpoint = {
+                "epoch": epoch + 1,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "val_acc": val_acc,
+                "args": vars(args),
+            }
+            # Only add if they exist
+            if arcface is not None:
+                checkpoint["arcface_state_dict"] = arcface.state_dict()
+            if scheduler is not None:
+                checkpoint["scheduler_state_dict"] = scheduler.state_dict()
+            torch.save(checkpoint, checkpoint_path)
             print(
                 f"✅ Best checkpoint saved: {checkpoint_path} (val_acc: {val_acc:.4f})"
             )
-
         # Optional: Save periodic checkpoint every N epochs
         if args.save_every and (epoch + 1) % args.save_every == 0:
             periodic_path = checkpoint_path.replace("_best", f"_epoch{epoch + 1}")
-            torch.save(
-                {
-                    "epoch": epoch + 1,
-                    "model_state_dict": model.state_dict(),
-                    "arcface_state_dict": arcface.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "scheduler_state_dict": (
-                        scheduler.state_dict() if scheduler else None
-                    ),
-                    "val_acc": val_acc,
-                    "args": vars(args),
-                },
-                periodic_path,
-            )
+            checkpoint = {
+                "epoch": epoch + 1,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "val_acc": val_acc,
+                "args": vars(args),
+            }
+            if arcface is not None:
+                checkpoint["arcface_state_dict"] = arcface.state_dict()
+            if scheduler is not None:
+                checkpoint["scheduler_state_dict"] = scheduler.state_dict()
+
+            torch.save(checkpoint, periodic_path)
             print(f"📁 Periodic checkpoint saved: {periodic_path}")
 
     print("\n✅ Training complete!")
