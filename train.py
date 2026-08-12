@@ -53,6 +53,11 @@ def create_model(args, num_classes, device):
     print(f"Selected model: {args.arch} with pretrained={args.pre_trained}")
     print(f"Created model:\n{model}")
 
+    # 🔴 FIX: Force all parameters to be trainable if not freezing
+    if not args.freeze_backbone:
+        for param in model.parameters():
+            param.requires_grad = True
+
     # Create ArcFace if enabled
     if args.use_arcface:
         arcface = ArcFace(
@@ -77,9 +82,9 @@ def create_model(args, num_classes, device):
             if len(update_params) == 0:
                 raise ValueError(
                     "No trainable parameters found! "
-                    "Either set freeze_backbone=False, enable ArcFace, "
-                    "or set num_classes > 0 for a trainable final layer."
+                    "Ensure freeze_backbone=False or enable ArcFace."
                 )
+
     else:
         if args.use_arcface:
             update_params = list(model.parameters()) + list(arcface.parameters())
