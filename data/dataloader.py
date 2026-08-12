@@ -208,6 +208,21 @@ def make_dataloaders(
         std=std,
         class_names=dataset_config["class_names"],
     )
+
+    print(f"Classes: {info.num_classes}")
+    print(f"Input shape: {info.input_shape}")
+    print(f"Train batches: {len(train_loader)}")
+    print(f"Val batches: {len(val_loader)}")
+
+    # Check dataset stats
+    print(f"Train samples: {len(train_loader.dataset)}")
+    print(f"Val samples: {len(val_loader.dataset)}")
+
+    # Check one batch
+    batch = next(iter(train_loader))
+    print(f"Batch images shape: {batch[0].shape}")  # Should be [128, 3, 224, 224]
+    print(f"Batch labels shape: {batch[1].shape}")  # Should be [128]
+    print(f"Label range: {batch[1].min()} to {batch[1].max()}")  # Should be 0-99
     return train_loader, val_loader, info
 
 
@@ -238,3 +253,13 @@ if __name__ == "__main__":
     print(f"Input shape: {info.input_shape}")
     print(f"Train batches: {len(train_loader)}")
     print(f"Val batches: {len(val_loader)}")
+
+    # Check dataset stats
+    print(f"Train samples: {len(train_loader.dataset)}")
+    print(f"Val samples: {len(val_loader.dataset)}")
+
+    # Check one batch
+    batch = next(iter(train_loader))
+    print(f"Batch images shape: {batch[0].shape}")  # Should be [128, 3, 224, 224]
+    print(f"Batch labels shape: {batch[1].shape}")  # Should be [128]
+    print(f"Label range: {batch[1].min()} to {batch[1].max()}")  # Should be 0-99

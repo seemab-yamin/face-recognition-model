@@ -125,7 +125,9 @@ def train_epoch(
             with autocast():
                 embeddings = model(images)  # Get 512-dim feature vectors
                 logits = arcface(embeddings, labels)  # Apply ArcFace margin
+                # print Training loss
                 loss = criterion(logits, labels)  # Standard Cross-Entrop
+                print(f"  Batch {batch_idx}: Loss = {loss.item():.4f}")
             scaler.scale(loss).backward()
             if use_grad_clip:
                 scaler.unscale_(optimizer)
@@ -138,6 +140,7 @@ def train_epoch(
             embeddings = model(images)  # Get 512-dim feature vectors
             logits = arcface(embeddings, labels)  # Apply ArcFace margin
             loss = criterion(logits, labels)  # Standard Cross-Entropy
+            print(f"  Batch {batch_idx}: Loss = {loss.item():.4f}")
             loss.backward()
             if use_grad_clip:
                 torch.nn.utils.clip_grad_norm_(
