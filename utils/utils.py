@@ -193,6 +193,18 @@ def parse_args_with_defaults():
         default=defaults.get("resume", True),
         help="Resume training from the last checkpoint",
     )
+    parser.add_argument(
+        "--arcface-m",
+        type=float,
+        default=defaults.get("arcface_m", 0.2),
+        help="ArcFace margin parameter",
+    )
+    parser.add_argument(
+        "--arcface-s",
+        type=float,
+        default=defaults.get("arcface_s", 64.0),
+        help="ArcFace scale parameter",
+    )
 
     # Now parse all args with the fully built parser
     args = parser.parse_args()

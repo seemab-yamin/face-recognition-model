@@ -55,7 +55,10 @@ def create_model(args, num_classes, device):
 
     # Create ArcFace
     arcface = ArcFace(
-        in_features=model.in_features, num_classes=num_classes, s=64.0, m=0.5
+        in_features=model.in_features,
+        num_classes=num_classes,
+        s=args.arcface_s,
+        m=args.arcface_m,
     ).to(device)
 
     # Select trainable parameters
@@ -129,6 +132,12 @@ def train_epoch(
                 loss = criterion(logits, labels)  # Standard Cross-Entrop
                 print(f"  Batch {batch_idx}: Loss = {loss.item():.4f}")
             scaler.scale(loss).backward()
+            # compute gradient norm for logging
+            total_norm = 0.0
+            for p in model.parameters():
+                if p.grad is not None:
+                    total_norm += p.grad.norm().item() ** 2
+            total_norm = total_norm**0.5
             if use_grad_clip:
                 scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(
@@ -142,6 +151,12 @@ def train_epoch(
             loss = criterion(logits, labels)  # Standard Cross-Entropy
             print(f"  Batch {batch_idx}: Loss = {loss.item():.4f}")
             loss.backward()
+            # compute gradient norm for logging
+            total_norm = 0.0
+            for p in model.parameters():
+                if p.grad is not None:
+                    total_norm += p.grad.norm().item() ** 2
+            total_norm = total_norm**0.5
             if use_grad_clip:
                 torch.nn.utils.clip_grad_norm_(
                     model.parameters(), max_norm=use_grad_clip
@@ -152,7 +167,9 @@ def train_epoch(
         batch_times.append(batch_time)
 
         if batch_idx % 10 == 0:
-            print(f"  Batch {batch_idx}: total={batch_time * 1000:.1f}ms")
+            print(
+                f"  Batch {batch_idx}: loss={loss.item():.4f}, grad_norm={total_norm:.4f}"
+            )
 
     epoch_time = time.time() - epoch_start
     avg_batch = sum(batch_times) / len(batch_times)
