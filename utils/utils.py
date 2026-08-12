@@ -8,6 +8,13 @@ import torch
 import yaml
 
 
+def check_tensor(tensor, name):
+    if torch.isnan(tensor).any():
+        print(f"❌ NaN detected in {name}")
+    if torch.isinf(tensor).any():
+        print(f"❌ Inf detected in {name}")
+
+
 # ==================== Helper: Setup ====================
 def setup():
     """Parse arguments and setup configuration."""
