@@ -73,6 +73,13 @@ def create_model(args, num_classes, device):
         else:
             # If backbone is frozen and no ArcFace, only train final layer
             update_params = [p for p in model.parameters() if p.requires_grad]
+            # If still empty, raise a clear error
+            if len(update_params) == 0:
+                raise ValueError(
+                    "No trainable parameters found! "
+                    "Either set freeze_backbone=False, enable ArcFace, "
+                    "or set num_classes > 0 for a trainable final layer."
+                )
     else:
         if args.use_arcface:
             update_params = list(model.parameters()) + list(arcface.parameters())
