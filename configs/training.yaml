@@ -1,9 +1,9 @@
 # training.yaml
 seed: 20
-arch: "resnet"
+arch: "resnet18"
 return_embeddings: true
 epochs: 10
-dataset: "CASIA-WebFace"
+dataset: "lfw"
 augment: true
 drop_last: true
 batch_size: 32
@@ -16,11 +16,11 @@ use_weight_decay: !!float 5e-4 # force float
 training_from_scratch: false
 use_scheduler: !!float 1e-6 # minimal learning rate for scheduler
 use_grad_clip: !!float 1.0
-data_dir: "./datasets"
-artifacts_dir: "./artifacts"
 resume: true
 save_best: true
 save_every: 5
 use_arcface: false
 arcface_m: !!float 0.2
 arcface_s: !!float 64.0
+data_dir: "./datasets"
+artifacts_dir: "./artifacts"
