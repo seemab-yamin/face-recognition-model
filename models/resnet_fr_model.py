@@ -18,15 +18,30 @@ class RESNETFRModel(nn.Module):
 
     """
 
-    def __init__(self, pretrained=False, freeze_backbone=False, num_classes=0) -> None:
+    def __init__(
+        self,
+        backbone_name="resnet18",
+        pretrained=False,
+        freeze_backbone=False,
+        num_classes=0,
+    ) -> None:
         super().__init__()
         self.pretrained = pretrained
         self.freeze_backbone = freeze_backbone
         self.num_classes = num_classes
 
-        self.model = models.resnet50(
-            weights=models.ResNet50_Weights.DEFAULT if pretrained else None
-        )
+        if backbone_name == "resnet18":
+            self.model = models.resnet18(
+                weights=models.ResNet18_Weights.DEFAULT if pretrained else None
+            )
+        elif backbone_name == "resnet50":
+            self.model = models.resnet50(
+                weights=models.ResNet50_Weights.DEFAULT if pretrained else None
+            )
+        else:
+            raise ValueError(
+                f"Unsupported backbone: {backbone_name}. Only 'resnet18' and 'resnet50' are supported."
+            )
         self.in_features = self.model.fc.in_features
         self.embedding_size = self.in_features
 
