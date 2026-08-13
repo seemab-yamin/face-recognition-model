@@ -5,7 +5,7 @@ import shutil
 import sys
 
 
-def prepare_casia_webface(data_dir, val_size=200):
+def prepare_casia_webface(data_dir, train_val_split_ratio=0.8):
     dataset_dir = os.path.join(data_dir, "webface_112x112")
     # check folder exist and has train and val sub folders with some files.
     if (
@@ -32,7 +32,9 @@ def prepare_casia_webface(data_dir, val_size=200):
         ]
 
         random.shuffle(all_dirs_path)
-        val_dirs_path = all_dirs_path[:val_size]
+        train_size = int(train_val_split_ratio * len(all_dirs_path))
+        # create deep copy of all_dirs_path for validation directories
+        val_dirs_path = all_dirs_path[train_size:].copy()
 
         # move validation files to val_dir
         for src in val_dirs_path:
