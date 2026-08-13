@@ -16,17 +16,13 @@ DATASET_CONFIGS = {
     "casia-webface": {
         "prepare_function": prepare_casia_webface,
         "data_folder": "webface_112x112",
-        # Calculated Mean: [0.5202712416648865, 0.40445297956466675, 0.3465300500392914]
         "mean": (0.5202712416648865, 0.40445297956466675, 0.3465300500392914),
-        # Calculated Std: [0.28148382902145386, 0.24436739087104797, 0.23586858808994293]
         "std": (0.28148382902145386, 0.24436739087104797, 0.23586858808994293),
     },
     "casia-webface-sample": {
         "prepare_function": prepare_casia_sample_webface,
         "data_folder": "webface_112x112_sample",
-        # Calculated Mean: [0.5202712416648865, 0.40445297956466675, 0.3465300500392914]
         "mean": (0.5202712416648865, 0.40445297956466675, 0.3465300500392914),
-        # Calculated Std: [0.28148382902145386, 0.24436739087104797, 0.23586858808994293]
         "std": (0.28148382902145386, 0.24436739087104797, 0.23586858808994293),
     },
 }
@@ -43,13 +39,11 @@ MODEL_REQUIREMENTS = {
 
 
 class DatasetInfo:
-    """Container for dataset metadata."""
-
     def __init__(self, num_classes, input_shape, mean, std, class_names):
         self.num_classes = num_classes
-        self.input_shape = input_shape  # (C, H, W)
-        self.mean = mean  # for normalization
-        self.std = std  # for normalization
+        self.input_shape = input_shape
+        self.mean = mean
+        self.std = std
         self.class_names = class_names
 
 
@@ -60,13 +54,11 @@ class FaceRecognitionDataset(Dataset):
         self.image_paths = []
         self.labels = []
 
-        # map class names to indices
         self.classes = sorted(
             entry.name for entry in os.scandir(root_dir) if entry.is_dir()
         )
         self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(self.classes)}
 
-        # populate image_paths and labels
         for cls_name in self.classes:
             cls_dir = os.path.join(root_dir, cls_name)
             for entry in os.scandir(cls_dir):
@@ -80,12 +72,10 @@ class FaceRecognitionDataset(Dataset):
         return len(self.image_paths)
 
     def __getitem__(self, idx):
-        image_path = self.image_paths[idx]
-        label = self.labels[idx]
-
-        # Load image
         from PIL import Image
 
+        image_path = self.image_paths[idx]
+        label = self.labels[idx]
         image = Image.open(image_path).convert("RGB")
 
         if self.transforms:
@@ -105,41 +95,29 @@ def make_dataloaders(
     arch: str = "resnet",
     drop_last: bool = True,
 ):
-    """
-    dataset factory to load datasets
-    """
     os.makedirs(data_dir, exist_ok=True)
     dataset_name = dataset_name.lower()
 
-    # Get dataset config
     if dataset_name not in DATASET_CONFIGS:
         raise ValueError(f"Unsupported dataset: {dataset_name}")
 
     dataset_config = DATASET_CONFIGS[dataset_name]
     mean, std = dataset_config["mean"], dataset_config["std"]
 
-    # Get model-specific requirements
     model_config = MODEL_REQUIREMENTS[arch]
     input_shape = model_config["input_shape"]
 
-    # if training from scratch, use dataset mean and std for normalization
     if training_from_scratch:
-        print(f"Using dataset mean and std for normalization: mean={mean}, std={std}")
-        mean = dataset_config["mean"]
-        std = dataset_config["std"]
+        print(f"Using dataset normalization: mean={mean}, std={std}")
     else:
-        print(f"Using model mean and std for normalization: mean={mean}, std={std}")
-        mean = model_config["mean"]
-        std = model_config["std"]
+        mean, std = model_config["mean"], model_config["std"]
+        print(f"Using model normalization: mean={mean}, std={std}")
 
     dataset_config["prepare_function"](data_dir)
-    print(f"Prepared dataset {dataset_name} in {data_dir}")
+    print(f"Dataset prepared: {dataset_name}")
 
-    # build transforms
-    train_transforms = [transforms.ToTensor()]
-
-    resize_size = input_shape[0], input_shape[1]  # Assuming square input
-    train_transforms = [transforms.Resize(resize_size)] + train_transforms
+    resize_size = (input_shape[0], input_shape[1])
+    train_transforms = [transforms.ToTensor(), transforms.Resize(resize_size)]
 
     if augment:
         train_transforms = [transforms.RandomHorizontalFlip()] + train_transforms
@@ -150,57 +128,36 @@ def make_dataloaders(
             transforms.Normalize(mean, std),
         ]
     )
-
-    val_transforms = [transforms.ToTensor()]
     val_transform = transforms.Compose(
         [
-            *val_transforms,
+            transforms.ToTensor(),
             transforms.Normalize(mean, std),
         ]
     )
 
-    # Get dataset class using folder names in data_dir
     data_folder = os.path.join(data_dir, dataset_config["data_folder"])
     train_dir = os.path.join(data_folder, "train")
     val_dir = os.path.join(data_folder, "val")
 
-    train_dataset = FaceRecognitionDataset(
-        root_dir=train_dir, transforms=train_transform
-    )
-    val_dataset = FaceRecognitionDataset(root_dir=val_dir, transforms=val_transform)
+    train_dataset = FaceRecognitionDataset(train_dir, train_transform)
+    val_dataset = FaceRecognitionDataset(val_dir, val_transform)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dataloader_kwargs = {
         "batch_size": batch_size,
         "num_workers": num_workers,
-        "pin_memory": (num_workers > 0)
-        and (device == "cuda"),  # default, will be set to True if device is CUDA
-        "drop_last": drop_last,  # drop last incomplete batch
+        "pin_memory": (num_workers > 0 and device == "cuda"),
+        "drop_last": drop_last,
         "worker_init_fn": seed_worker,
-        "generator": torch.Generator().manual_seed(seed),  # for reproducibility
+        "generator": torch.Generator().manual_seed(seed),
     }
 
-    # read classes from the dataset directory
-    dataset_config["num_classes"] = train_dataset.classes.__len__()
+    dataset_config["num_classes"] = len(train_dataset.classes)
     dataset_config["class_names"] = train_dataset.classes
 
-    # Build dataloaders
-    train_loader = DataLoader(
-        train_dataset,
-        shuffle=True,
-        **dataloader_kwargs,
-    )
-    val_loader = DataLoader(
-        val_dataset,
-        shuffle=False,
-        **dataloader_kwargs,
-    )
-    if device == "cuda":
-        print(
-            f"Using CUDA with {num_workers} workers and pin_memory={dataloader_kwargs.get('pin_memory', False)}"
-        )
+    train_loader = DataLoader(train_dataset, shuffle=True, **dataloader_kwargs)
+    val_loader = DataLoader(val_dataset, shuffle=False, **dataloader_kwargs)
 
-    # Create info object
     info = DatasetInfo(
         num_classes=dataset_config["num_classes"],
         input_shape=input_shape,
@@ -209,32 +166,21 @@ def make_dataloaders(
         class_names=dataset_config["class_names"],
     )
 
-    print(f"Classes: {info.num_classes}")
-    print(f"Input shape: {info.input_shape}")
-    print(f"Train batches: {len(train_loader)}")
-    print(f"Val batches: {len(val_loader)}")
-
-    # Check dataset stats
-    print(f"Train samples: {len(train_loader.dataset)}")
-    print(f"Val samples: {len(val_loader.dataset)}")
-
-    # Check one batch
-    batch = next(iter(train_loader))
-    print(f"Batch images shape: {batch[0].shape}")  # Should be [128, 3, 224, 224]
-    print(f"Batch labels shape: {batch[1].shape}")  # Should be [128]
-    print(f"Label range: {batch[1].min()} to {batch[1].max()}")  # Should be 0-99
+    # Single summary line
+    print(
+        f"Loaded {info.num_classes} classes, {len(train_loader.dataset)} train, {len(val_loader.dataset)} val samples"
+    )
     return train_loader, val_loader, info
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, help="Name of the dataset")
-    parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
-    parser.add_argument("--num-workers", type=int, default=4, help="Number of workers")
-    parser.add_argument("--augment", action="store_true", help="Enable augmentation")
-    parser.add_argument(
-        "--data-dir", type=str, default="./data", help="Data directory for the dataset"
-    )
+    parser.add_argument("--dataset", type=str, default="casia-webface-sample")
+    parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--num-workers", type=int, default=4)
+    parser.add_argument("--augment", action="store_true")
+    parser.add_argument("--data-dir", type=str, default="./data")
+    parser.add_argument("--drop_last", action="store_true")
     args = parser.parse_args()
 
     train_loader, val_loader, info = make_dataloaders(
@@ -242,24 +188,14 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         augment=args.augment,
-        training_from_scratch=False,
+        training_from_scratch=True,
         arch="resnet",
         data_dir=args.data_dir,
         drop_last=args.drop_last,
     )
 
-    print(f"Dataset: {args.dataset}")
-    print(f"Classes: {info.num_classes}")
-    print(f"Input shape: {info.input_shape}")
-    print(f"Train batches: {len(train_loader)}")
-    print(f"Val batches: {len(val_loader)}")
-
-    # Check dataset stats
-    print(f"Train samples: {len(train_loader.dataset)}")
-    print(f"Val samples: {len(val_loader.dataset)}")
-
-    # Check one batch
+    # Quick validation check
     batch = next(iter(train_loader))
-    print(f"Batch images shape: {batch[0].shape}")  # Should be [128, 3, 224, 224]
-    print(f"Batch labels shape: {batch[1].shape}")  # Should be [128]
-    print(f"Label range: {batch[1].min()} to {batch[1].max()}")  # Should be 0-99
+    print(
+        f"Batch: images {batch[0].shape}, labels {batch[1].shape}, range {batch[1].min()}-{batch[1].max()}"
+    )
