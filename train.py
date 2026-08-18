@@ -36,7 +36,7 @@ def load_data(args):
         num_workers=args.num_workers,
         data_dir=args.data_dir,
         augment=args.augment,
-        training_from_scratch=args.training_from_scratch,
+        normalization=args.normalization,
         arch=args.arch,
     )
     print(f"Created dataloaders with {info.num_classes} classes")
