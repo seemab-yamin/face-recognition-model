@@ -94,7 +94,6 @@ def parse_args_with_defaults():
         ("--pre-trained", "pre_trained"),
         ("--use-amp", "use_amp"),
         ("--use-weight-decay", "use_weight_decay"),
-        ("--training-from-scratch", "training_from_scratch"),
         ("--save-best", "save_best"),
         ("--resume", "resume"),
         ("--use-arcface", "use_arcface"),
