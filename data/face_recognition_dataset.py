@@ -3,10 +3,11 @@ import random
 import shutil
 
 import torch
+from PIL import Image
 from torch.utils.data import Dataset
 
 
-def prepare_lfw(data_dir, train_val_split_ratio=0.8):
+def prepare_lfw(data_dir, train_val_split_ratio=0.8, delete_zip=False):
     """
     Download LFW dataset if necessary and split identity directories
     into train and validation sets.
@@ -38,11 +39,75 @@ def prepare_lfw(data_dir, train_val_split_ratio=0.8):
             f"""curl -C - -L -o {zip_path} https://www.kaggle.com/api/v1/datasets/download/jessicali9530/lfw-dataset"""
         )
 
-        # Extract the zip file
-        os.system(f"unzip -q -o {zip_path} -d {data_dir}")
+        # Extract the zip file directly into dataset_dir
+        os.system(f"unzip -q -o {zip_path} -d {dataset_dir}")
 
-        # Remove the zip file after extraction (optional)
-        # os.remove(zip_path)
+        # Remove the zip file after extraction
+        if os.path.exists(zip_path) and delete_zip:
+            os.remove(zip_path)
+
+        # Handle nested folder structure (lfw-deepfunneled/lfw-deepfunneled/)
+        nested_dir = os.path.join(dataset_dir, "lfw-deepfunneled", "lfw-deepfunneled")
+        if os.path.exists(nested_dir) and os.path.isdir(nested_dir):
+            for item in os.listdir(nested_dir):
+                src = os.path.join(nested_dir, item)
+                dst = os.path.join(dataset_dir, item)
+                if os.path.isdir(src):
+                    shutil.move(src, dst)
+            os.rmdir(os.path.join(dataset_dir, "lfw-deepfunneled", "lfw-deepfunneled"))
+            os.rmdir(os.path.join(dataset_dir, "lfw-deepfunneled"))
+
+        # Handle if extraction created a different subfolder
+        extracted_dir = os.path.join(dataset_dir, "lfw-dataset")
+        if os.path.exists(extracted_dir) and os.path.isdir(extracted_dir):
+            for item in os.listdir(extracted_dir):
+                src = os.path.join(extracted_dir, item)
+                dst = os.path.join(dataset_dir, item)
+                if os.path.isdir(src):
+                    shutil.move(src, dst)
+            os.rmdir(extracted_dir)
+
+    # ---- ADD THIS SPLITTING LOGIC ----
+    train_dir = os.path.join(dataset_dir, "train")
+    val_dir = os.path.join(dataset_dir, "val")
+
+    # Get all identity directories (exclude train, val, and hidden folders, and CSV files)
+    all_identities = [
+        d
+        for d in os.listdir(dataset_dir)
+        if os.path.isdir(os.path.join(dataset_dir, d))
+        and not d.startswith(".")
+        and d not in ["train", "val"]
+    ]
+
+    # If identities exist and train/val folders don't, create splits
+    if len(all_identities) > 0 and (
+        not os.path.exists(train_dir) or not os.path.exists(val_dir)
+    ):
+        print(f"Splitting {len(all_identities)} identities into train/val...")
+
+        os.makedirs(train_dir, exist_ok=True)
+        os.makedirs(val_dir, exist_ok=True)
+
+        random.shuffle(all_identities)
+        split_idx = int(train_val_split_ratio * len(all_identities))
+
+        train_identities = all_identities[:split_idx]
+        val_identities = all_identities[split_idx:]
+
+        for identity in train_identities:
+            src = os.path.join(dataset_dir, identity)
+            dst = os.path.join(train_dir, identity)
+            shutil.move(src, dst)
+
+        for identity in val_identities:
+            src = os.path.join(dataset_dir, identity)
+            dst = os.path.join(val_dir, identity)
+            shutil.move(src, dst)
+
+        print(
+            f"Train: {len(train_identities)} identities, Val: {len(val_identities)} identities"
+        )
 
 
 def prepare_casia_webface(data_dir, train_val_split_ratio=0.8):
@@ -74,7 +139,7 @@ def prepare_casia_webface(data_dir, train_val_split_ratio=0.8):
             f"""curl -C - -L -o {data_dir}/webface_112x112.zip https://www.kaggle.com/api/v1/datasets/download/yakhyokhuja/webface-112x112"""
         )
 
-        os.system(f"unzip -q -o {data_dir}/webface_112x112.zip -d {data_dir}")
+        os.system(f"unzip -q -o {data_dir}/webface_112x112.zip -d {dataset_dir}")
 
     train_dir = os.path.join(dataset_dir, "train")
     val_dir = os.path.join(dataset_dir, "val")
@@ -118,7 +183,101 @@ def prepare_casia_webface(data_dir, train_val_split_ratio=0.8):
                 shutil.move(src, dst)
 
 
-class FaceRecognitionDataset(Dataset):
+class LFWKaggleDataset(Dataset):
+    """Custom LFW dataset loader for Kaggle download structure."""
+
+    base_folder = "lfw"
+
+    def __init__(self, root, split="train", transform=None):
+        """
+        Args:
+            root (str): Path to the LFW dataset directory (e.g., './data/lfw')
+            split (str): 'train' or 'val' (or 'test' if you have it)
+            transform (callable, optional): Transform to apply to images
+        """
+        self.root = root
+        self.split = split
+        self.transform = transform
+
+        # Get the split directory
+        self.split_dir = os.path.join(root, self.base_folder, split)
+
+        # Check if split directory exists, if not use root (for raw LFW)
+        if not os.path.exists(self.split_dir):
+            self.split_dir = root
+
+        # Collect all image paths and their labels (identity folders)
+        self.samples = []
+        self.class_to_idx = {}
+
+        # Get all identity folders
+        self.classes = [
+            d
+            for d in os.listdir(self.split_dir)
+            if os.path.isdir(os.path.join(self.split_dir, d))
+            and not d.startswith(".")
+            and d not in ["train", "val"]  # Exclude train/val folders
+        ]
+
+        # Sort for reproducibility
+        self.classes.sort()
+
+        # Create class mapping
+        for idx, identity in enumerate(self.classes):
+            self.class_to_idx[identity] = idx
+            identity_path = os.path.join(self.split_dir, identity)
+
+            # Get all images in this identity folder
+            image_files = [
+                f
+                for f in os.listdir(identity_path)
+                if os.path.isfile(os.path.join(identity_path, f))
+                and not f.startswith(".")
+                and (
+                    f.lower().endswith((".jpg", ".jpeg", ".png"))  # With extension
+                    or "." not in f
+                )
+            ]
+
+            for img_file in image_files:
+                self.samples.append(
+                    {
+                        "path": os.path.join(identity_path, img_file),
+                        "label": idx,
+                        "identity": identity,
+                    }
+                )
+
+        print(
+            f"LFW ({split}): {len(self.samples)} images, {len(self.classes)} identities"
+        )
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        sample = self.samples[idx]
+        img_path = sample["path"]
+        label = sample["label"]
+
+        # Load image using PIL
+        try:
+            image = Image.open(img_path).convert("RGB")
+        except Exception as e:
+            print(f"Error loading image {img_path}: {e}")
+            # Return a dummy image (black) if loading fails
+            image = Image.new("RGB", (112, 112), color="black")
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, label
+
+    def get_num_classes(self):
+        return len(self.class_to_idx)
+
+
+class WebFaceKaggleDataset(Dataset):
     """
     Dataset for loading images organized by identity.
 

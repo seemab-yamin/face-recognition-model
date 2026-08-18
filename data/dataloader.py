@@ -3,10 +3,11 @@ import os
 
 import torch
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
+from torchvision import transforms
 
 from data.face_recognition_dataset import (
-    FaceRecognitionDataset,
+    LFWKaggleDataset,
+    WebFaceKaggleDataset,
     prepare_casia_webface,
     prepare_lfw,
 )
@@ -16,7 +17,7 @@ from utils.utils import seed_worker
 DATASET_CONFIGS = {
     "casia-webface": {
         "prepare_function": prepare_casia_webface,
-        "class": FaceRecognitionDataset,
+        "class": WebFaceKaggleDataset,
         "num_classes": 0,
         "class_names": "",
         "mean": (0.5202712416648865, 0.40445297956466675, 0.3465300500392914),
@@ -26,13 +27,13 @@ DATASET_CONFIGS = {
     },
     "lfw": {
         "prepare_function": prepare_lfw,
-        "class": datasets.LFWPeople,
+        "class": LFWKaggleDataset,
         "num_classes": 0,
         "class_names": "",
         "mean": (0.464, 0.395, 0.347),
         "std": (0.252, 0.231, 0.223),
-        "train_kwargs": {"split": "train", "download": False},
-        "test_kwargs": {"split": "test", "download": False},
+        "train_kwargs": {"split": "train"},
+        "test_kwargs": {"split": "val"},
     },
 }
 

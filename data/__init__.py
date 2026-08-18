@@ -1,12 +1,14 @@
 from .dataloader import make_dataloaders
 from .face_recognition_dataset import (
-    FaceRecognitionDataset,
+    LFWKaggleDataset,
+    WebFaceKaggleDataset,
     prepare_casia_webface,
     prepare_lfw,
 )
 
 __all__ = [
-    "FaceRecognitionDataset",
+    "LFWKaggleDataset",
+    "WebFaceKaggleDataset",
     "make_dataloaders",
     "prepare_casia_webface",
     "prepare_lfw",
