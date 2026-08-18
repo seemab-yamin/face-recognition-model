@@ -4,7 +4,7 @@ arch: "resnet18"
 return_embeddings: true
 epochs: 10
 dataset: "lfw"
-normalization="dataset" # dataset, model
+normalization: "dataset" # dataset, model
 augment: true
 drop_last: true
 batch_size: 32

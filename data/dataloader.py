@@ -5,8 +5,8 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
-from data import FaceRecognitionDataset, prepare_casia_webface
-from utils import seed_worker
+from data.face_recognition_dataset import FaceRecognitionDataset, prepare_casia_webface
+from utils.utils import seed_worker
 
 # Dataset-specific configurations
 DATASET_CONFIGS = {
