@@ -43,9 +43,6 @@ def prepare_casia_webface(data_dir, train_val_split_ratio=0.8):
     # validate if the val and train folders exist
     if not os.path.exists(train_dir) or not os.path.exists(val_dir):
 
-        os.makedirs(train_dir, exist_ok=True)
-        os.makedirs(val_dir, exist_ok=True)
-
         # Get all unique identity folders
         all_dirs_path = [
             os.path.join(dataset_dir, f)
@@ -53,6 +50,8 @@ def prepare_casia_webface(data_dir, train_val_split_ratio=0.8):
             if os.path.isdir(os.path.join(dataset_dir, f)) and not f.startswith(".")
         ]
 
+        os.makedirs(train_dir, exist_ok=True)
+        os.makedirs(val_dir, exist_ok=True)
         random.shuffle(all_dirs_path)
 
         train_size = int(train_val_split_ratio * len(all_dirs_path))
@@ -120,6 +119,7 @@ class FaceRecognitionDataset(Dataset):
 
         if not os.path.isdir(root):
             raise FileNotFoundError(f"Dataset directory does not exist: {root}")
+
         split_root = os.path.join(root, split)
         if not os.path.isdir(split_root):
             raise FileNotFoundError(
@@ -127,17 +127,20 @@ class FaceRecognitionDataset(Dataset):
             )
 
         self.root = root
+        self.split_root = split_root
         self.transform = transform
         self.split = split
         self.image_paths = []
         self.labels = []
 
         self.classes = sorted(
-            entry.name for entry in os.scandir(root) if entry.is_dir()
+            entry.name for entry in os.scandir(self.split_root) if entry.is_dir()
         )
 
         if not self.classes:
-            raise RuntimeError(f"No class directories found in dataset: {root}")
+            raise RuntimeError(
+                f"No class directories found in dataset: {self.split_root}"
+            )
 
         self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(self.classes)}
 
@@ -151,7 +154,7 @@ class FaceRecognitionDataset(Dataset):
                     self.labels.append(self.class_to_idx[cls_name])
 
         if not self.image_paths:
-            raise RuntimeError(f"No images found in dataset: {root}")
+            raise RuntimeError(f"No images found in dataset: {self.split_root}")
 
     def __len__(self):
         return len(self.image_paths)
