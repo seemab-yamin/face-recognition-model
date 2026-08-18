@@ -57,11 +57,15 @@ def parse_args_with_defaults():
     defaults = load_config(known_args.config)
 
     # Core
-    parser.add_argument("--arch", type=str, default=defaults.get("arch", "resnet"))
+    parser.add_argument("--arch", type=str, default=defaults.get("arch", "resnet18"))
     parser.add_argument("--seed", type=int, default=defaults.get("seed", 42))
     parser.add_argument("--epochs", type=int, default=defaults.get("epochs", 10))
+    parser.add_argument("--dataset", type=str, default=defaults.get("dataset", "model"))
     parser.add_argument(
-        "--dataset", type=str, default=defaults.get("dataset", "casia-webface")
+        "--normalization",
+        type=str,
+        default=defaults.get("normalization", "dataset"),
+        choices=["dataset", "model"],
     )
     parser.add_argument(
         "--batch-size", type=int, default=defaults.get("batch_size", 32)
