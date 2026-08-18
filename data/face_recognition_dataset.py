@@ -109,6 +109,7 @@ class FaceRecognitionDataset(Dataset):
     """
 
     VALID_SPLITS = {"train", "val"}
+    base_folder = "webface_112x112"
 
     def __init__(self, split, root, transform=None):
         if split not in self.VALID_SPLITS:
@@ -120,18 +121,16 @@ class FaceRecognitionDataset(Dataset):
         if not os.path.isdir(root):
             raise FileNotFoundError(f"Dataset directory does not exist: {root}")
 
-        split_root = os.path.join(root, split)
-        if not os.path.isdir(split_root):
-            raise FileNotFoundError(
-                f"Dataset split directory does not exist: {split_root}"
-            )
-
-        self.root = root
-        self.split_root = split_root
+        self.split_root = os.path.join(root, self.base_folder, split)
         self.transform = transform
         self.split = split
         self.image_paths = []
         self.labels = []
+
+        if not os.path.isdir(self.split_root):
+            raise FileNotFoundError(
+                f"Dataset split directory does not exist: {self.split_root}"
+            )
 
         self.classes = sorted(
             entry.name for entry in os.scandir(self.split_root) if entry.is_dir()
@@ -145,7 +144,7 @@ class FaceRecognitionDataset(Dataset):
         self.class_to_idx = {cls_name: idx for idx, cls_name in enumerate(self.classes)}
 
         for cls_name in self.classes:
-            cls_dir = os.path.join(split_root, cls_name)
+            cls_dir = os.path.join(self.split_root, cls_name)
             for entry in os.scandir(cls_dir):
                 if entry.is_file() and entry.name.lower().endswith(
                     (".png", ".jpg", ".jpeg")

@@ -12,7 +12,6 @@ from utils.utils import seed_worker
 DATASET_CONFIGS = {
     "casia-webface": {
         "prepare_function": prepare_casia_webface,
-        "root": "webface_112x112",
         "class": FaceRecognitionDataset,
         "num_classes": 0,
         "class_names": "",
@@ -115,16 +114,8 @@ def make_dataloaders(
     )
 
     dataset_class = dataset_config["class"]
-    train_dataset_kwargs = {
-        **dataset_config["train_kwargs"],
-    }
-    test_dataset_kwargs = {
-        **dataset_config["test_kwargs"],
-    }
-    if "casia-webface" == dataset_name:
-        root = os.path.join(data_dir, dataset_config["root"])
-        train_dataset_kwargs["root"] = root
-        test_dataset_kwargs["root"] = root
+    train_dataset_kwargs = {**dataset_config["train_kwargs"], "root": data_dir}
+    test_dataset_kwargs = {**dataset_config["test_kwargs"], "root": data_dir}
 
     train_dataset = dataset_class(**train_dataset_kwargs, transform=train_transforms)
     val_dataset = dataset_class(**test_dataset_kwargs, transform=val_transforms)
