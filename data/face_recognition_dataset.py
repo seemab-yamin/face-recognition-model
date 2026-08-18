@@ -44,47 +44,6 @@ def prepare_lfw(data_dir, train_val_split_ratio=0.8):
         # Remove the zip file after extraction (optional)
         # os.remove(zip_path)
 
-    train_dir = os.path.join(dataset_dir, "train")
-    val_dir = os.path.join(dataset_dir, "val")
-
-    # Validate if the val and train folders exist
-    if not os.path.exists(train_dir) or not os.path.exists(val_dir):
-
-        # Get all unique identity folders (exclude train/val folders)
-        all_dirs_path = [
-            os.path.join(dataset_dir, f)
-            for f in os.listdir(dataset_dir)
-            if os.path.isdir(os.path.join(dataset_dir, f))
-            and not f.startswith(".")
-            and f not in ["train", "val"]  # Exclude existing train/val folders
-        ]
-
-        os.makedirs(train_dir, exist_ok=True)
-        os.makedirs(val_dir, exist_ok=True)
-        random.shuffle(all_dirs_path)
-
-        train_size = int(train_val_split_ratio * len(all_dirs_path))
-
-        # Split directories into train and val
-        train_dirs_path = all_dirs_path[:train_size]
-        val_dirs_path = all_dirs_path[train_size:]
-
-        # Move validation directories to val_dir
-        for src in val_dirs_path:
-            if os.path.exists(src):
-                dst = os.path.join(val_dir, os.path.basename(src))
-                shutil.move(src, dst)
-
-        # Move training directories to train_dir
-        for src in train_dirs_path:
-            if os.path.exists(src):
-                dst = os.path.join(train_dir, os.path.basename(src))
-                shutil.move(src, dst)
-
-        print(
-            f"LFW dataset prepared: {len(train_dirs_path)} training identities, {len(val_dirs_path)} validation identities"
-        )
-
 
 def prepare_casia_webface(data_dir, train_val_split_ratio=0.8):
     """
